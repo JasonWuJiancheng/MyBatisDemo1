@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace：命名空间，作用就是对sql进行分类化管理，sql隔离 -->
+
+<mapper namespace="test">
+	<!-- 在映射文件中配置sql语句 -->
+	<!-- 
+		#{} :占位符，可以使用任何值；若传入参数类型是pojo，则通过OGNL来获取对象属性值
+		${} :拼接字符串，如果传入简单类型只能使用value
+		id：标识文件中的sql
+		parameterType:传入参数类型
+		resultType：单条记录所映射类型
+	-->
+	
+	<!-- 根据id查找用户(引用别名user) -->
+	<select id="findUserById" parameterType="int" resultType="user">
+		SELECT * FROM USER WHERE id=#{id}
+	</select>
+	
+	<!-- 根据姓名模糊查找用户 -->
+	<select id="findUserByUsername" parameterType="java.lang.String" resultType="com.mybatis.pojo.User">
+		SELECT * FROM USER WHERE username LIKE '%${value}%'
+	</select>
+	
+	<!-- 添加用户 -->
+	<insert id="insertUser" parameterType="com.mybatis.pojo.User">
+		<!-- 
+			功能：将插入的主键返回到User对象中
+			SELECT LAST_INSERT_ID():得到刚insert进去记录的主键值，只适用于自增主键（mysql函数）
+			keyProperty:将查询到主键值设置到parameterType对象指定属性中
+			order：相对于insert操作的执行顺序
+		-->
+		<selectKey keyProperty="id" resultType="int" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		INSERT INTO USER(username,password) value(#{username},#{password})
+	</insert>
+	
+<!-- 	<insert id="insertUser" parameterType="com.mybatis.pojo.User">
+		
+			功能：生成uuid主键并插入
+			SELECT uuid():生成主键（mysql函数）
+			执行顺序：先通过uuid()得到主键，再设置到id属性中
+		
+		<selectKey keyProperty="id" resultType="int" order="AFTER">
+			SELECT uuid()
+		</selectKey>
+		INSERT INTO USER(id,username,password) value(#{id},#{username},#{password})
+	</insert> -->
+	
+	<!-- 删除用户 -->
+	<delete id="deleteUser" parameterType="int">
+		DELETE FROM USER WHERE id=#{id}
+	</delete>
+	
+	<!-- 更新用户 -->
+	<update id="updateUser" parameterType="com.mybatis.pojo.User">
+		UPDATE USER SET username=#{username},password=#{password} WHERE id=#{id}
+	</update>
+
+</mapper>

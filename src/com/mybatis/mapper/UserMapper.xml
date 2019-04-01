@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<!-- namespace：命名空间，作用就是对sql进行分类化管理，sql隔离 -->
+
+<mapper namespace="com.mybatis.mapper.UserMapper">
+	<!-- 在映射文件中配置sql语句 -->
+	
+	<!-- 定义sql片段
+	id：sql片段唯一标识
+	经验：基于单表定义sql片段以提高重用性、片段中不要包含where
+	 -->
+	 <sql id="query_user_where">
+ 		<if test="userCustom!=null">
+			<if test="userCustom.sex!=null and userCustom.sex!=''">
+				and user.sex = #{userCustom.sex}
+			</if>
+			<if test="userCustom.username!=null and userCustom.username!=''">
+				and user.username like '%${userCustom.username}%'
+			</if>
+			<if test="ids!=null">
+				<!-- 使用foreach遍历传入ids
+				collection：指定输入对象中集合属性
+				item：每次遍历生成的对象名
+				open：开始遍历时拼接的串
+				close：结束遍历时拼接的串
+				separator：遍历对象分割串
+				 -->
+				<!-- 实现下面的sql拼接
+				and (id=1 or id=10 or id=...) -->
+				<foreach collection="ids" item="user_id" open="AND (" close=")" separator="or" >
+					id=#{user_id}
+				</foreach>
+			</if>
+		</if>
+	 </sql>
+	
+	<!-- 定义resultMap 将 SELECT id id_,username username_ FROM USER 和User类做一个映射关系
+	type：resultMap最终映射的java对象类型（可以使用别名）
+	id：对resultMap的唯一标识
+	 -->
+	<resultMap type="user" id="userResultMap">
+		<!-- id：表示查询结果集中唯一标识
+		column：查询出来的列名
+		property：type制定的pojo类型中的属性名
+		作用：将column和property做一个映射关系
+		 -->
+		<id column="id_" property="id"/>
+		<!-- result：对普通列的对应关系 -->
+		<result column="username_" property="username"/>
+	</resultMap>
+	
+	<!-- 根据使用resultMap做映射查找用户
+	resultMap：填写其id，如果在其它mapper中则需在前在namespace
+	 -->
+	<select id="findUserByIdResultMap" parameterType="int" resultMap="userResultMap">
+		SELECT id id_,username username_ FROM USER WHERE id=#{id}
+	</select>
+	
+	<!-- 
+		#{} :占位符，可以使用任何值；若传入参数类型是pojo，则通过OGNL来获取对象属性值
+		${} :拼接字符串，如果传入简单类型只能使用value
+		id：标识文件中的sql
+		parameterType:传入参数类型
+		resultType：单条记录所映射类型
+	-->
+	
+	<!-- 用户综合信息查询 -->
+	<!-- 取出包装类中的信息 -->
+	<select id="findUserList" parameterType="com.mybatis.pojo.UserQueryVo" resultType="com.mybatis.pojo.UserCustom">
+		select * from user
+		<!-- where可以去掉条件中第一个and -->
+		<where>
+			<!-- 引用sql片段，如果引用片段不在此mapper中，需要加namespace -->
+			<include refid="query_user_where"></include>
+			<!-- 在这里引用其它sql片段 -->
+		</where>
+	</select>
+	
+	<!-- 用户信息综合查询总数(用做分页) -->
+	<select id="findUserCount" parameterType="com.mybatis.pojo.UserQueryVo" resultType="int">
+		select count(*) from user
+		<!-- where可以去掉条件中第一个and -->
+		<where>
+			<!-- 引用sql片段，如果引用片段不在此mapper中，需要加namespace -->
+			<include refid="query_user_where"></include>
+			<!-- 在这里引用其它sql片段 -->
+		</where>
+	</select>
+	
+	<!-- 根据id查找用户 -->
+	<select id="findUserById" parameterType="int" resultType="user">
+		SELECT * FROM USER WHERE id=#{id}
+	</select>
+	
+	<!-- 根据姓名模糊查找用户 -->
+	<select id="findUserByUsername" parameterType="java.lang.String" resultType="com.mybatis.pojo.User">
+		SELECT * FROM USER WHERE username LIKE '%${value}%'
+	</select>
+	
+	<!-- 添加用户 -->
+	<insert id="insertUser" parameterType="com.mybatis.pojo.User">
+		<!-- 
+			功能：将插入的主键返回到User对象中
+			SELECT LAST_INSERT_ID():得到刚insert进去记录的主键值，只适用于自增主键（mysql函数）
+			keyProperty:将查询到主键值设置到parameterType对象指定属性中
+			order：相对于insert操作的执行顺序
+		-->
+		<selectKey keyProperty="id" resultType="int" order="AFTER">
+			SELECT LAST_INSERT_ID()
+		</selectKey>
+		INSERT INTO USER(username,password) value(#{username},#{password})
+	</insert>
+	
+<!-- 	<insert id="insertUser" parameterType="com.mybatis.pojo.User">
+		
+			功能：生成uuid主键并插入
+			SELECT uuid():生成主键（mysql函数）
+			执行顺序：先通过uuid()得到主键，再设置到id属性中
+		
+		<selectKey keyProperty="id" resultType="int" order="AFTER">
+			SELECT uuid()
+		</selectKey>
+		INSERT INTO USER(id,username,password) value(#{id},#{username},#{password})
+	</insert> -->
+	
+	<!-- 删除用户 -->
+	<delete id="deleteUser" parameterType="int">
+		DELETE FROM USER WHERE id=#{id}
+	</delete>
+	
+	<!-- 更新用户 -->
+	<update id="updateUser" parameterType="com.mybatis.pojo.User">
+		UPDATE USER SET username=#{username},password=#{password} WHERE id=#{id}
+	</update>
+
+</mapper>
